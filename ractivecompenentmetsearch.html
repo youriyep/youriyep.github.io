@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ractive Component</title>
+    <script src="https://cdn.jsdelivr.net/npm/ractive"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ractive-events-keys@0.2.1/dist/ractive-events-keys.min.js"></script>
+</head>
+<body>
+    <div id="container">
+    </div>
+    <script id="template" type="text/ractive">
+        <button on-click='fetchdata'>Fetchdata</button>
+        <input on-enter='search' style='display:{{visible}}'>
+        <div>
+            <Component>
+        </div>
+    </script>
+    <script id="component" type="text/ractive">
+        <table>
+        <tr>
+        <th>Id:</th>
+        <th>Name:</th>
+        <th>Country:</th>
+        <th>Coord:</th>
+        </tr>
+        {{#tabledata:i}}
+            <tr {{#if i < maxsize && i >= minsize}} class='visible'{{else}} class='invisible'{{/if}} id='tr{{i}}'>
+                {{#if i < maxsize && i >= minsize}}
+                    <td>{{tabledata[i].id}}</td>
+                    <td>{{tabledata[i].name}}</td>
+                    <td>{{tabledata[i].country}}</td>
+                    <td>{{tabledata[i].coord.lon}} {{tabledata[i].coord.lat}}</td>
+                {{else}}
+                    <td><br></td>
+                {{/if}}
+            </tr>
+        {{/}}
+        </table>
+    </script>
+    <script>
+
+        document.addEventListener('DOMContentLoaded', function(){
+            let json;
+            const Component = Ractive.extend({
+                isolated: false,
+                template: '#component',
+            });
+            const ractive = new Ractive({
+                el: '#container',
+                template: '#template',
+                data: {
+                    data: {},
+                    tabledata: {},
+                    visible: 'none',
+                    loc: 0,
+                    minsize: 0,
+                    maxsize: 0,
+                    count: 0
+                },
+                components: {
+                    Component
+                }
+            });
+            ractive.set('maxsize', ractive.get('minsize') + 50);
+            ractive.on({
+                fetchdata: function (e) {
+                    fetch('https://www.dennisvanriet.nl/ractive_rest/ractive_data.php?size=100000')
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(myJson) {
+                            ractive.set('data', myJson);
+                            ractive.set('visible', 'block');
+                            e.node.style.display = 'none';
+                        });
+
+                },
+                search: (e)=>{
+                    const regex = new RegExp(e.node.value, 'gi');
+                    const data = ractive.get('data');
+                    const array = data.filter((e)=>{
+                        if (regex.exec(e.name) !== null || regex.exec(e.country) !== null) {
+                            return true;
+                    }});
+                    ractive.set('tabledata', array);
+                }
+            });
+            onscroll = (e)=>{
+                if(isInViewport(document.getElementsByClassName('visible')[document.getElementsByClassName('visible').length - 11])) {
+                    const size = ractive.get('maxsize');
+                    for (let i = size; i < size + 10; i++) {
+                        console.log('I is: ' + i);
+                    }
+                    // ractive.set('minsize', ractive.get('minsize') + 10);
+                    ractive.set('maxsize', size + 10);
+                }
+                // }else if(isInViewport(document.getElementsByClassName('visible')[0] && ractive.get('minsize') > 9)){
+                //     ractive.set('minsize', ractive.get('minsize') - 10);
+                //     ractive.set('maxsize', size - 10);
+                // }
+            };
+
+            function isInViewport(element) {
+                const rect = element.getBoundingClientRect();
+                const html = document.documentElement;
+                return (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= (window.innerHeight || html.clientHeight) &&
+                    rect.right <= (window.innerWidth || html.clientWidth)
+                );
+            }
+        });
+    </script>
+</body>
+</html>
